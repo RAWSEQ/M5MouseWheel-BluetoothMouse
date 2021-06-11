@@ -17,17 +17,17 @@
 #define MODE_WY_COLOR 0x00cccc
 #define MODE_STEP_COLOR 0xffffff
 
-int batt_percent=100;
+#define INTERVAL_TIMES_MIDDLE 500
 
-int encoder_pos=0;
-int encoder_r_pos=0;
-
+bool ble_mode=false;
 int st_mode=0;
-int ble_mode=-1;
+int batt_percent=100;
+int encoder_pos=0;
 int m_step=1;
 int st_b_l=0;
 int st_b_r=0;
 int st_b_m=0;
+int iv_cnt_middle=0;
 
 ButtonColors cl_on  = {0x7BEF, WHITE, WHITE};
 ButtonColors cl_off = {BLACK, 0xC618, 0xC618};
@@ -42,7 +42,7 @@ Button btn_l(170, 6, 65, 100, false ,"L", cl_off, cl_on);
 Button btn_r(240, 6, 70, 48, false ,"R", cl_off, cl_on);
 Button btn_m(240, 58, 70, 48, false ,"M", cl_off, cl_on);
 
-BleMouse bleMouse("M5MouseWheel", "@RAWSEQ", 100);
+BleMouse bleMouse("M5MouseWheel", "@RAWSEQ", batt_percent);
 
 void setup() {
   // Setup M5
@@ -67,39 +67,50 @@ void setup() {
   
   // Bluetooth Begin
   bleMouse.begin();
-
+  label_change_status("Bluetooth Pairing...", RED);
 }
 
 void loop() {
   M5.update();
-  if(bleMouse.isConnected()) {
+
+  // Interval Middle
+  iv_cnt_middle++; if (iv_cnt_middle >= INTERVAL_TIMES_MIDDLE) { iv_cnt_middle = 0; }
+  if (iv_cnt_middle == 0) {
+    
+    // Bluetooth
+    bool diff_ble_mode = ble_mode;
+    ble_mode = bleMouse.isConnected();
+    if (diff_ble_mode != ble_mode) {
+      if (ble_mode) {
+        label_change_status("Bluetooth Connected.", BLUE);
+      } else {
+        label_change_status("Bluetooth Pairing...", RED);
+      }
+    }
+
+    // Battery
+    float batVoltage = M5.Axp.GetBatVoltage();
+    int batPercent = ( batVoltage < 3.2 ) ? 0 : ( batVoltage - 3.2 ) * 100;
+    if (batt_percent != batPercent) {
+      bleMouse.setBatteryLevel(batPercent);
+      batt_percent = batPercent;
+    }
+  }
+
+  // Encoder Monitoring
+  if (ble_mode) {
     Wire1.requestFrom(Faces_Encoder_I2C_ADDR, 3);
     if (Wire1.available()) {   
       int increment = Wire1.read();
+      int diff_encoder_pos = encoder_pos;
       encoder_pos += ((increment > 127) ? (256 - increment) * -1 : increment);
-      if (encoder_pos != encoder_r_pos) {
-        event_encoder_rotate(encoder_pos - encoder_r_pos);
+      if (encoder_pos != diff_encoder_pos) {
+        event_encoder_rotate(encoder_pos - diff_encoder_pos);
       }
-      encoder_r_pos = encoder_pos;
-    }
-    if (ble_mode != 1) {
-      label_change_status("Bluetooth Connected.", BLUE);
-      ble_mode = 1;
-    }
-  } else {
-    if (ble_mode != 0) {
-      label_change_status("Bluetooth Pairing...", RED);
-      ble_mode = 0;
     }
   }
 
-  float batVoltage = M5.Axp.GetBatVoltage();
-  int batPercent = ( batVoltage < 3.2 ) ? 0 : ( batVoltage - 3.2 ) * 100;
-  if (batt_percent != batPercent) {
-    bleMouse.setBatteryLevel(batPercent);
-    batt_percent = batPercent;
-  }
-
+  delay(10);
 }
 
 void label_change_status(char *msg, long color) {
@@ -156,7 +167,6 @@ void event_encoder_rotate(int incremental) {
     default:
       break;
   }
-  Serial.println("roate"+incremental);
 }
 
 void sub_set_mode(int mode, long color) {
