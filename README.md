@@ -11,6 +11,10 @@ Enabled M5MouseWheel to be used as a Bluetooth mouse.
 - M5 Faces Encoder Module
 - Bluetooth 4.0 (LE)
 
+## Attention
+
+The HID mouse control has a "Dead Zone" for the first few dots. If you want to avoid this, please use the OLD version.
+
 ## Firmware
 
 Arduino IDE Sketch for M5Stack CORE2 & Faces & Encoder Module<br>
