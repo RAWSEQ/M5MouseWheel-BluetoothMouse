@@ -15,6 +15,8 @@ Enabled M5MouseWheel to be used as a Bluetooth mouse.
 
 The HID mouse control has a "Dead Zone" for the first few dots. If you want to avoid this, please use the OLD version.
 
+https://github.com/RAWSEQ/M5MouseWheel
+
 ## Firmware
 
 Arduino IDE Sketch for M5Stack CORE2 & Faces & Encoder Module<br>
